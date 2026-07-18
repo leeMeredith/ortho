@@ -1,0 +1,17 @@
+{
+  "name": "ortho",
+  "version": "0.2.0",
+  "description": "Invented-language generator — pseudo-words in the uncanny valley between legible text and noise. Reference implementation and web/ScriptHub host.",
+  "type": "module",
+  "main": "src/index.js",
+  "exports": {
+    ".": "./src/index.js"
+  },
+  "scripts": {
+    "demo": "node demo/cli.js",
+    "oracle": "node test/oracle.js",
+    "test": "node test/conformance.js",
+    "play": "node play.js"
+  },
+  "license": "MIT"
+}

@@ -1,0 +1,15 @@
+# ortho has zero dependencies and no build step — this is mostly hygiene.
+
+node_modules/
+package-lock.json
+
+# OS / editor cruft
+.DS_Store
+Thumbs.db
+*.swp
+.vscode/
+.idea/
+
+# scratch output
+/tmp/
+*.log
