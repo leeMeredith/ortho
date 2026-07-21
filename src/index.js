@@ -16,7 +16,7 @@
 // language you liked. This is the exact method list the C external exposes as
 // messages (bang -> paragraph, `tokens N`, `page N`, `seed N`).
 
-import { Ortho, ALPHABET, CONSONANTS, VOWELS, PUNCTUATION } from "./engine.js";
+import { Ortho, ALPHABET, CONSONANTS, VOWELS, PUNCTUATION, SRC } from "./engine.js";
 
 // page() lives here as a thin composition over paragraph(), so the engine
 // core stays focused. A page is an array of paragraphs (each a word array).
@@ -59,4 +59,4 @@ function render(structure, opts = {}) {
   return paras.map((p) => indent + p.join(wordSep)).join(paraSep);
 }
 
-export { Ortho, ALPHABET, CONSONANTS, VOWELS, PUNCTUATION, render };
+export { Ortho, ALPHABET, CONSONANTS, VOWELS, PUNCTUATION, SRC, render };

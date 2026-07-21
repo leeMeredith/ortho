@@ -292,9 +292,15 @@ a silent edit.
 
 - **`ortho`** (this repo) — reference implementation, spec (this file), golden
   vectors, and the web / ScriptHub host. The authority.
-- **`ortho-kernel`** — the shared, host-neutral C source (`ortho_engine.c/h`,
-  `prng.c/h`). Public API returns plain C data (arrays of C strings + counts);
-  no host types. Included as a git submodule by the two C/C++ hosts.
+- **`ortho-kernel`** — a shared, host-neutral C implementation. It exposes a
+  C API implementing this specification: caller-owned memory (the kernel never
+  allocates), value-returning calls (no callbacks), and a token type carrying
+  text plus source classification. No host types appear in the public API.
+  Included as a git submodule by the two C/C++ hosts.
+
+  *This specification defines behavior, not file layout.* Any implementation
+  that conforms to the vectors and invariants is a conforming implementation,
+  whatever its language or directory structure.
 - **`ortho-max`** — Max external. Glue over `ortho-kernel`; the seven dials are
   attributes/messages. Tests against this repo's vectors.
 - **`ortho-of`** — openFrameworks add-on (`ofxOrtho`). Thin C++ wrapper over the

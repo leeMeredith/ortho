@@ -18,6 +18,18 @@ const VOWELS     = "aeiouy";
 
 const PUNCTUATION = ".?!";
 
+// Token source classification. Values are NORMATIVE and match the C kernel's
+// `ortho_source` enum exactly — they travel in the golden vectors (v2+) and in
+// the ortho_token struct, so hosts can branch on why a token appeared (e.g.
+// ScriptHub spawning a corridor when a new subject shows up).
+const SRC = {
+  FRESH: 0,     // freshly generated, not recurring
+  FUNCTION: 1,  // document-scope function word (grammar glue)
+  TOPIC: 2,     // section-scope topic word (the phony WHAT)
+  NAME: 3,      // section-scope name (the phony WHO)
+  PHRASE: 4,    // member of a recurring multi-word phrase
+};
+
 class Ortho {
   constructor(seed = 0, opts = {}) {
     this.seed = seed >>> 0;
@@ -229,11 +241,13 @@ class Ortho {
   _recurrentOrNull() {
     // 1. drain (phrase-first, atomic)
     if (this._phraseQueue.length > 0) {
+      this._lastSource = SRC.PHRASE;
       return this._phraseQueue.shift();
     }
     // 2. short-circuit: all recurrence off -> no draws, vectors intact
     if (this.phrases <= 0 && this.functionWords <= 0 &&
         this.topics <= 0 && this.names <= 0) {
+      this._lastSource = SRC.FRESH;
       return null;
     }
     if (this.section === null) this.newSection();
@@ -243,22 +257,27 @@ class Ortho {
         this.rng.next() < this.phrases) {
       const p = this.section.phrases[this.rng.below(this.section.phrases.length)];
       for (let i = 1; i < p.length; i++) this._phraseQueue.push(p[i]);
+      this._lastSource = SRC.PHRASE;
       return p[0];
     }
     if (this.functionWords > 0 && this.rng.next() < this.functionWords) {
       const t = this.tables.functionWords;
+      this._lastSource = SRC.FUNCTION;
       return t[this.rng.below(t.length)];
     }
     if (this.topics > 0 && this.section.topics.length &&
         this.rng.next() < this.topics) {
       const t = this.section.topics;
+      this._lastSource = SRC.TOPIC;
       return t[this.rng.below(t.length)];
     }
     if (this.names > 0 && this.section.names.length &&
         this.rng.next() < this.names) {
       const t = this.section.names;
+      this._lastSource = SRC.NAME;
       return t[this.rng.below(t.length)];
     }
+    this._lastSource = SRC.FRESH;
     return null;
   }
 
@@ -560,23 +579,34 @@ class Ortho {
   // maxLetters bounds per-word length so a token stream has natural word
   // variation without any sentence/paragraph structure imposed.
   tokens(n, maxLetters = 8) {
+    return this.tokensWithSource(n, maxLetters).map((t) => t.text);
+  }
+
+  // Same generation as tokens(), but each entry carries its source
+  // classification: { text, source } where source is one of SRC.*. This is the
+  // JS mirror of the C kernel's `ortho_token` struct, and the form the v2
+  // golden vectors record. Identical draw order to tokens() — the source is
+  // observed, never rolled for — so adding it changed no output.
+  tokensWithSource(n, maxLetters = 8) {
     let count = n | 0;
     if (count < 0) count = 0;
     const out = new Array(count);
     for (let i = 0; i < count; i++) {
       // same weave as sentence(): lets the harness stress "every token
-      // unique" (repetition 0) vs "same few terms hammered" (high) — two very
-      // different intake pressures. Zero PRNG cost at repetition 0, so the
-      // frozen golden vectors remain byte-valid.
+      // unique" (all dials 0) vs "same few terms hammered" (high) — two very
+      // different intake pressures. Zero PRNG cost when all recurrence dials
+      // are 0, so the frozen golden vectors remain byte-valid.
       let w = this._recurrentOrNull();
+      let src = this._lastSource;
       if (w === null) {
         const len = 1 + this.rng.below(maxLetters); // 1..maxLetters, never 0
         w = this.word(len);
+        src = SRC.FRESH;
       }
-      out[i] = w;
+      out[i] = { text: w, source: src };
     }
     return out;
   }
 }
 
-export { Ortho, ALPHABET, CONSONANTS, VOWELS, PUNCTUATION };
+export { Ortho, ALPHABET, CONSONANTS, VOWELS, PUNCTUATION, SRC };
