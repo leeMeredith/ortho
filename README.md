@@ -9,9 +9,21 @@ persistent language substrate (consonants, vowels, digraphs, trigraphs,
 contractions) once from a seed, then draws every word from that same substrate
 for its lifetime. Same seed → same language, reproducibly.
 
-This repo is the **reference implementation**. A Max/MSP external (`ortho`)
-mirrors this logic in C; the two are kept in lockstep via a shared PRNG and a
-golden-vector harness (see below).
+This repo is the **reference implementation** and the specification. The native
+hosts wrap a shared C kernel that conforms to the same golden vectors, so a
+seed names the same invented language everywhere.
+
+## The constellation
+
+- **`ortho`** (this repo) — reference implementation (JavaScript),
+  [specification](./SPEC.md), and golden vectors. **The authority.**
+- **[`ortho-kernel`](https://github.com/leeMeredith/ortho-kernel)** — the shared
+  host-neutral C engine, conformant with vectors v2.
+- **`ortho-max`** — Max/MSP external, wraps the kernel (in progress).
+- **`ortho-of`** — openFrameworks addon (`ofxOrtho`), wraps the kernel (planned).
+
+Coherence is proven, not hoped for: every host diffs its output against the
+golden vectors in `test/vectors/`. Same seed → same language, everywhere.
 
 ## Two APIs
 
