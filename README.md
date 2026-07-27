@@ -3,11 +3,11 @@
 > **The authority for what ortho *is* lives in [`SPEC.md`](./SPEC.md).**
 > This README is the tour; the spec is the contract every host conforms to.
 
-A generator for *invented language* — pseudo-words with the uncanny quality of
-text you can almost read but don't belong to. One `Ortho` instance builds a
-persistent language substrate (consonants, vowels, digraphs, trigraphs,
-contractions) once from a seed, then draws every word from that same substrate
-for its lifetime. Same seed → same language, reproducibly.
+A generator for *invented language* — pseudo-words that hold the shape and
+internal consistency of a language without belonging to any existing one. One
+`Ortho` instance builds a persistent language substrate (consonants, vowels,
+digraphs, trigraphs, contractions) once from a seed, then draws every word from
+that same substrate for its lifetime. Same seed → same language, reproducibly.
 
 This repo is the **reference implementation** and the specification. The native
 hosts wrap a shared C kernel that conforms to the same golden vectors, so a
@@ -67,8 +67,8 @@ new Ortho(42, { preset: 0.4, commas: 0 });      // explicit opts override preset
 ```
 
 Recurrence family — **phrases** (multi-word units, phrase-first atomic),
-**functionWords** (grammar-glue, document scope), **topics** (the phony *what*,
-section scope), **names** (the phony *who*, section scope). Punctuation family
+**functionWords** (grammar-glue, document scope), **topics** (the section's
+subject, section scope), **names** (the section's identities, section scope). Punctuation family
 (readable path only) — **commas** (function-word-anchored, rhythmic fallback),
 **quotation** (speaker-anchored span), **scareQuotes** (single term).
 
