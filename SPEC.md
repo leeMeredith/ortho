@@ -16,9 +16,10 @@ language → byte-identical tokens, on every platform.
 
 ## 1. What ortho is
 
-ortho generates *invented language* — pseudo-words with the uncanny quality of
-text you can almost read but do not belong to. A single ortho instance builds a
-persistent **language substrate** once from a seed, then draws every word from
+ortho generates *invented language* — pseudo-words that hold the shape and
+internal consistency of a language without belonging to any existing one. A
+single ortho instance builds a persistent **language substrate** once from a
+seed, then draws every word from
 that same substrate for its entire life. Same seed → same language,
 reproducibly. Close and reopen → same seed gives the same language; a new seed
 gives a new one.
@@ -118,7 +119,7 @@ Produces one word. Draw order (normative):
    - 2: interleave vowel-first, reverse
    - 3: interleave consonant-first, reverse
 
-   All four modes are REQUIRED — the irregularity is the uncanny effect.
+   All four modes are REQUIRED — the irregularity is the point.
 5. **Digraph/trigraph injection.** Draw `below(2)`; if 0: when `length>9`, splice
    a trigraph (draw its index) at an end determined by mode; when `5<length<8`,
    splice a digraph (draw its index) similarly.
@@ -139,7 +140,7 @@ they are ordinary functions.)
 
 For each: draw `ranTest=below(10)`; if `<3`, `ranTest=5`. Generate
 `word(ranTest, contractions=false)`, title-case the first letter. Names are
-capitalized; they are the "phony who."
+capitalized; they carry the section's identities.
 
 ### 5.4 Function words (20, built at substrate time)
 
@@ -165,8 +166,8 @@ attributes/messages, and oF setters.
 |---|---|---|
 | `phrases` | section | multi-word phrase recurrence, phrase-first atomic |
 | `functionWords` | document | grammar-glue recurrence |
-| `topics` | section | the phony *what* recurring |
-| `names` | section | the phony *who* recurring (capitalized) |
+| `topics` | section | the section's subject recurring |
+| `names` | section | the section's identities recurring (capitalized) |
 
 **Punctuation family** (readable path ONLY — never touches `tokens`):
 
