@@ -10,7 +10,7 @@ Coherence across hosts is *proven*, not hoped for: every host that generates
 output diffs it against the published golden vectors (§8). Same seed → same
 language → byte-identical tokens, on every platform.
 
-**Spec version:** 1.0 · **Vector set:** v1 · **PRNG:** Mulberry32
+**Spec version:** 1.1 · **Vector set:** v2 · **PRNG:** Mulberry32
 
 ---
 
