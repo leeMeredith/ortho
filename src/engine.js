@@ -390,7 +390,7 @@ class Ortho {
 
       // --- digraph / trigraph injection ---------------------------------
       if (rng.below(2) === 0) {
-        if (word.length > 9) {
+        if (word.length > 7) {
           const tri = this.tables.consonantTrigraphs[
             rng.below(this.tables.consonantTrigraphs.length)
           ];
@@ -400,7 +400,7 @@ class Ortho {
             word = Ortho._spliceRange(word, tri, 0, 2);
           }
         }
-        if (word.length > 5 && word.length < 8) {
+        if (word.length > 2 && word.length < 8) {
           const di = this.tables.consonantDigraphs[
             rng.below(this.tables.consonantDigraphs.length)
           ];
@@ -423,7 +423,7 @@ class Ortho {
       word = Ortho._insertAt(word, word.charAt(2), 1);
     }
 
-    return word;
+    return clusterGuard(word);
   }
 
   // ---- punctuation pass (readable path only) ----------------------------
@@ -563,7 +563,7 @@ class Ortho {
     if (maxLetters <= 3) maxLetters = 5;
     const out = [];
     for (let i = 0; i < s; i++) {
-      const words = this.sentence(this.rng.below(maxWords), this.rng.below(maxLetters));
+      const words = this.sentence(this.rng.below(maxWords), maxLetters);
       for (const w of words) out.push(w);
     }
     return out;
@@ -608,5 +608,38 @@ class Ortho {
     return out;
   }
 }
+
+/* SPEC 2.0 §5.1 step 8 — cluster guard.
+ *
+ * A filter over the finished word, not a decision: consumes no PRNG draws, so
+ * it cannot shift the stream. Drops a character when either holds:
+ *   - it would be the third consecutive occurrence of the same letter
+ *   - it is a consonant identical to the one before it, with at least two
+ *     consonants already in the run
+ *
+ * Trigraphs (three DISTINCT consonants) are deliberately untouched — they are
+ * how a seed's own tables reach the page. Apostrophes are transparent: neither
+ * vowel nor consonant, and they do not reset the run.
+ */
+function clusterGuard(w) {
+  if (!w) return w;
+  const V = "aeiouy";
+  const isC = (c) => c !== "'" && V.indexOf(c) === -1;
+  let out = "";
+  let cons = 0;
+  for (let i = 0; i < w.length; i++) {
+    const ch = w[i];
+    if (out.length >= 2 && ch === out[out.length - 1] && ch === out[out.length - 2]) continue;
+    if (isC(ch)) {
+      if (cons >= 2 && out.length && ch === out[out.length - 1]) continue;
+      cons++;
+    } else if (ch !== "'") {
+      cons = 0;
+    }
+    out += ch;
+  }
+  return out;
+}
+
 
 export { Ortho, ALPHABET, CONSONANTS, VOWELS, PUNCTUATION, SRC };
