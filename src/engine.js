@@ -109,45 +109,156 @@ class Ortho {
     const rng = this.rng;
     const t = this.tables;
 
+    // ===================================================================
+    // SPEC 3.0 — the language's own character, minted once, before any
+    // word exists. Names and function words are built afterwards from
+    // these tables, so a language's cast belongs to it.
+    //
+    // Spec 2.x gave every seed the same phonology: all 26 letters drawn
+    // uniformly, one assembler, one punctuation style. Seeds differed in
+    // vocabulary and nothing else, which is exactly what a careful reader
+    // reported seeing. Everything below is an axis on which languages can
+    // actually differ.
+    // ===================================================================
+
+    // --- draw helpers --------------------------------------------------
+    // A weighted picker's weights are blended toward uniform by `mix`.
+    // Exponent alone cannot control this: over a 4-item set, raw random
+    // weights already leave one member holding about half the mass.
+    const mkw = (n, e, mix) => {
+      const w = [];
+      let sum = 0;
+      for (let i = 0; i < n; i++) {
+        const x = (1 - mix) / n + mix * Math.pow(rng.next(), e);
+        w.push(x); sum += x;
+      }
+      const cum = [];
+      let acc = 0;
+      for (let i = 0; i < n; i++) { acc += w[i] / sum; cum.push(acc); }
+      return cum;
+    };
+    const subset = (pool, k) => {
+      const avail = pool.split("");
+      const out = [];
+      for (let i = 0; i < k && avail.length; i++) {
+        out.push(avail.splice(rng.below(avail.length), 1)[0]);
+      }
+      return out.join("");
+    };
+
+    // --- root template: the shape every word is built from --------------
+    // What separates language families before you consider which letters
+    // they use. Each carries a bias applied to its consonant weights, so a
+    // vowel-leading shape cannot compound with vowel-favouring weights into
+    // something that is all vowels.
+    const ROOTS = [
+      ["CVCV",  1.0], ["CVC",   1.0], ["CCVC",  1.2], ["CVCC",  1.2],
+      ["CVCVC", 1.0], ["CCVCV", 1.1], ["VCVC",  0.8], ["CVCCV", 1.1],
+      // Vowel-cluster shapes. Adjacent V slots draw a pair from this
+      // language's vowelDigraphs, so a CVV language has diphthong-like
+      // clusters the way a CCVC language has consonant ones.
+      ["CVV",   1.3], ["CVVC",  1.2],
+    ];
+    const chosen = ROOTS[rng.below(ROOTS.length)];
+    t.root = chosen[0];
+
+    // --- phoneme inventory ---------------------------------------------
+    // Languages vary enormously here. Hawaiian works with 8 consonants,
+    // English with about 24, the crosslinguistic average is near 23. A
+    // language using a third of the alphabet repeats those few sounds
+    // constantly, and that repetition is most of what makes it recognisable.
+    const nCons = 6 + rng.below(15);   // 6-20 of 20
+    const nVow  = 4 + rng.below(3);    // 4-6 of 6 — never 3: with any
+                                       // lopsided weight a 3-vowel language
+                                       // collapses onto one and reads as a
+                                       // stutter rather than a tongue
+    t.consSet  = subset(CONSONANTS, nCons);
+    t.vowelSet = subset(VOWELS, nVow);
+
+    // Weights COMPENSATE for inventory size rather than compounding with it.
+    // Subset and weight are both narrowing devices; at full strength together
+    // they leave a single letter doing all the work.
+    t.vowelW = mkw(nVow,  1.4,              0.20 + 0.55 * (nVow  / VOWELS.length));
+    t.consW  = mkw(nCons, 1.4 * chosen[1],  0.25 + 0.55 * (nCons / CONSONANTS.length));
+
+    // --- punctuation character set -------------------------------------
+    // The dials decide HOW OFTEN a mark appears; the seed decides WHICH mark
+    // it is. `commas 0.4` in a semicolon language produces semicolons. The
+    // dial names stay frozen vocabulary across every host.
+    //
+    // HOST NOTE: comma and semicolon are message separators in Max. A token
+    // carrying one re-parses if pasted into a message box; colon and dash do
+    // not. A language's clause mark therefore decides whether its readable
+    // output is message-box-safe. See HOSTS.md.
+    // The dash sits tight against the words on both sides, like a hyphen —
+    // a spaced dash would read as an English typographic convention rather
+    // than as this language's own clause mark.
+    t.clauseMark = [",", ";", ":", "\u2014"][rng.below(4)];
+    t.quotePair  = [['"', '"'], ["\u00ab", "\u00bb"], ["\u2039", "\u203a"]][rng.below(3)];
+
+    // Whether quoted speech opens with a capital. Real orthographies differ,
+    // and the distinction is legible: a capitalised span reads as an utterance
+    // someone said, a lowercase one reads as a term held up for inspection.
+    // Since the span is already speaker-anchored — a cast name precedes it —
+    // the capital is what completes the effect.
+    t.capitalizeQuoted = rng.below(2) === 0;
+
+    // Terminal marks: every language ends sentences, not every language
+    // exclaims or asks in writing.
+    t.terminals = ".";
+    if (rng.below(2) === 0) t.terminals += "?";
+    if (rng.below(2) === 0) t.terminals += "!";
+
+    // --- compounding ----------------------------------------------------
+    // Some languages join two roots into one word. This is word FORMATION,
+    // not punctuation, so a compound is a single token and appears on the
+    // `tokens` path like any other word.
+    t.compounds = rng.below(4) === 0;
+
     // vowel digraphs -----------------------------------------------------
     // FIX #2: original inner loop overwrote index rVowD every pass, so only
     // ~5 entries survived (each the last pairing). Now every vowel pair is
     // emitted, giving a real table of VOWELS.length^2 digraphs.
-    for (let i = 0; i < VOWELS.length; i++) {
-      for (let j = 0; j < VOWELS.length; j++) {
-        t.vowelDigraphs.push(VOWELS.charAt(i) + VOWELS.charAt(j));
+    // Every ordered pair from THIS language's vowel subset. Spec 1.x and 2.x
+    // built all 36 pairs from the full canon and then never read the table —
+    // a universal table would reintroduce exactly the uniformity the subsets
+    // exist to remove. A CVV language draws its vowel clusters from here.
+    for (let i = 0; i < t.vowelSet.length; i++) {
+      for (let j = 0; j < t.vowelSet.length; j++) {
+        if (i === j) continue;   // a doubled vowel is a long vowel, not a cluster
+        t.vowelDigraphs.push(t.vowelSet.charAt(i) + t.vowelSet.charAt(j));
       }
     }
 
     // consonant digraphs -------------------------------------------------
     const nConDigraphs = 30;
     for (let k = 0; k < nConDigraphs; k++) {
-      let a = rng.below(CONSONANTS.length);
-      let b = rng.below(CONSONANTS.length);
-      while (a === b) b = rng.below(CONSONANTS.length);
-      t.consonantDigraphs.push(CONSONANTS.charAt(a) + CONSONANTS.charAt(b));
+      let a = rng.below(t.consSet.length);
+      let b = rng.below(t.consSet.length);
+      while (a === b) b = rng.below(t.consSet.length);
+      t.consonantDigraphs.push(t.consSet.charAt(a) + t.consSet.charAt(b));
     }
 
     // consonant trigraphs ------------------------------------------------
     const nConTrigraphs = 10;
     for (let k = 0; k < nConTrigraphs; k++) {
       const idx = [
-        rng.below(CONSONANTS.length),
-        rng.below(CONSONANTS.length),
-        rng.below(CONSONANTS.length),
+        rng.below(t.consSet.length),
+        rng.below(t.consSet.length),
+        rng.below(t.consSet.length),
       ];
       // de-duplicate the three positions so no trigraph has a repeat
       for (let a = 0; a < 3; a++) {
         for (let b = 0; b < 3; b++) {
           if (a !== b) {
-            while (idx[a] === idx[b]) idx[b] = rng.below(CONSONANTS.length);
+            while (idx[a] === idx[b]) idx[b] = rng.below(t.consSet.length);
           }
         }
       }
       t.consonantTrigraphs.push(
-        CONSONANTS.charAt(idx[0]) +
-        CONSONANTS.charAt(idx[1]) +
-        CONSONANTS.charAt(idx[2])
+        t.consSet.charAt(idx[0]) +
+        t.consSet.charAt(idx[1]) +
+        t.consSet.charAt(idx[2])
       );
     }
 
@@ -160,12 +271,12 @@ class Ortho {
     const nDouble = 5;
     for (let k = 0; k < nContractions; k++) {
       if (k < nDouble) {
-        const a = rng.below(ALPHABET.length);
-        const b = rng.below(ALPHABET.length);
-        t.contractions.push("'" + ALPHABET.charAt(a) + ALPHABET.charAt(b));
+        const a = rng.below(t.consSet.length + t.vowelSet.length);
+        const b = rng.below(t.consSet.length + t.vowelSet.length);
+        t.contractions.push("'" + (t.consSet + t.vowelSet).charAt(a) + (t.consSet + t.vowelSet).charAt(b));
       } else {
-        const a = rng.below(ALPHABET.length);
-        t.contractions.push("'" + ALPHABET.charAt(a));
+        const a = rng.below(t.consSet.length + t.vowelSet.length);
+        t.contractions.push("'" + (t.consSet + t.vowelSet).charAt(a));
       }
     }
 
@@ -293,7 +404,12 @@ class Ortho {
 
   _buildFunctionWords(n) {
     const t = this.tables.functionWords;
-    let size = 2;
+    // Starts at ONE letter. A single-letter function word is a particle — the
+    // equivalent of English `a` or `I` — and languages have them. word()
+    // keeps its own floor of one full root, because a single-letter CONTENT
+    // word is a truncation artifact rather than a word class. The distinction
+    // is deliberate: short grammar, never short vocabulary.
+    let size = 1;
     let count = 0;
     const step = Math.floor(n / 4);
     for (let i = 0; i < n; i++) {
@@ -328,102 +444,103 @@ class Ortho {
   word(numLetters, opts = {}) {
     const useContractions = opts.contractions !== false;
     const rng = this.rng;
+    const t = this.tables;
 
     let n = numLetters | 0;
     if (n <= 0) n = 1;
 
-    // --- decide vowel/consonant split (ported from original) -------------
-    let numVowels;
-    if (n > 5) {
-      numVowels = Math.floor((rng.next() * n) / 2);
-      if (n >= n - 2) numVowels = n / 2; // original's wordMaxAddVow branch
-    } else {
-      const pick = rng.below(2);
-      if (pick === 0 && n > 2) numVowels = 2;
-      else numVowels = 1;
-      if (n <= 3) numVowels = 1;
-      if (n === 4 || n === 5) numVowels = 1;
-    }
-    numVowels = Math.floor(numVowels);
-    let numConsonants = n - numVowels;
-    if (numConsonants < 1) numConsonants = 1;
-
-    // --- build the vowel and consonant pools ----------------------------
-    let vowels = "";
-    for (let v = 0; v < numVowels; v++) {
-      vowels += VOWELS.charAt(rng.below(VOWELS.length));
-    }
-    let consonants = "";
-    for (let c = 0; c < numConsonants; c++) {
-      consonants += CONSONANTS.charAt(rng.below(CONSONANTS.length));
-    }
-
-    // --- consonant-heavy path (original numOfVowels==1 && cons>=5) -------
-    let word = "";
-    if (numVowels <= 1 && numConsonants >= 5) {
-      const setIndex = Math.floor(numConsonants / 2);
-      word = Ortho._insertAt(consonants, vowels, setIndex);
-    } else {
-      // --- four mix modes (all kept) ------------------------------------
-      const mode = rng.below(4);
-      if (mode === 0) {
-        for (let m = 0; m < n; m++) {
-          if (m < vowels.length) word += vowels.charAt(m);
-          if (m < consonants.length) word += consonants.charAt(m);
+    // --- build one root-shaped run --------------------------------------
+    // Length is rounded UP to a whole number of roots, minimum one, so a word
+    // is an honest instance of the language's shape rather than a truncation
+    // of it. This is why single-letter words cannot occur: the shortest
+    // possible word is one full root.
+    const run = (len) => {
+      const R = t.root;
+      const reps = Math.max(1, Math.round(len / R.length));
+      const slots = R.repeat(reps);
+      let out = "";
+      let i = 0;
+      while (i < slots.length) {
+        if (slots[i] === "V") {
+          // Two adjacent vowel slots take a cluster from this language's own
+          // table, mirroring how consonant runs take digraphs and trigraphs.
+          let vk = 0;
+          while (i + vk < slots.length && slots[i + vk] === "V") vk++;
+          if (vk >= 2 && t.vowelDigraphs.length) {
+            out += t.vowelDigraphs[rng.below(t.vowelDigraphs.length)];
+            i += 2;
+            continue;
+          }
+          let ch = t.vowelSet.charAt(this._wpick(t.vowelW));
+          // Redraw once if it would repeat the previous letter. Adjacent
+          // slots of the same class collide often in a small inventory, and a
+          // doubled letter at a slot boundary reads as a stutter, not a
+          // geminate. One redraw, never a loop: a small inventory would spin.
+          if (ch === out.slice(-1)) ch = t.vowelSet.charAt(this._wpick(t.vowelW));
+          out += ch;
+          i++;
+          continue;
         }
-      } else if (mode === 1) {
-        for (let m = 0; m < n; m++) {
-          if (m < consonants.length) word += consonants.charAt(m);
-          if (m < vowels.length) word += vowels.charAt(m);
-        }
-      } else if (mode === 2) {
-        for (let m = n; m >= 0; m--) {
-          if (m < vowels.length) word += vowels.charAt(m);
-          if (m < consonants.length) word += consonants.charAt(m);
-        }
-      } else {
-        for (let m = n; m >= 0; m--) {
-          if (m < consonants.length) word += consonants.charAt(m);
-          if (m < vowels.length) word += vowels.charAt(m);
+        // Consonant run. This is where the digraph and trigraph tables
+        // belong: they ARE this language's permitted clusters, so they fill
+        // adjacent consonant slots rather than being spliced over a finished
+        // word. Spec 2.x injected them positionally, which appended clusters
+        // to templates that forbid them — a CVCV language has no consonant
+        // clusters at all, exactly as Hawaiian has none, and under this rule
+        // it correctly never uses a digraph.
+        let k = 0;
+        while (i + k < slots.length && slots[i + k] === "C") k++;
+        if (k >= 3 && t.consonantTrigraphs.length) {
+          out += t.consonantTrigraphs[rng.below(t.consonantTrigraphs.length)];
+          i += 3;
+        } else if (k >= 2 && t.consonantDigraphs.length) {
+          out += t.consonantDigraphs[rng.below(t.consonantDigraphs.length)];
+          i += 2;
+        } else {
+          let ch = t.consSet.charAt(this._wpick(t.consW));
+          if (ch === out.slice(-1)) ch = t.consSet.charAt(this._wpick(t.consW));
+          out += ch;
+          i++;
         }
       }
+      return out;
+    };
 
-      // --- digraph / trigraph injection ---------------------------------
-      if (rng.below(2) === 0) {
-        if (word.length > 7) {
-          const tri = this.tables.consonantTrigraphs[
-            rng.below(this.tables.consonantTrigraphs.length)
-          ];
-          if (mode === 0 || mode === 1) {
-            word = Ortho._spliceRange(word, tri, word.length - 2, word.length);
-          } else {
-            word = Ortho._spliceRange(word, tri, 0, 2);
-          }
-        }
-        if (word.length > 2 && word.length < 8) {
-          const di = this.tables.consonantDigraphs[
-            rng.below(this.tables.consonantDigraphs.length)
-          ];
-          if (mode === 0 || mode === 1) {
-            word = Ortho._spliceRange(word, di, word.length - 1, word.length);
-          } else {
-            word = Ortho._spliceRange(word, di, 0, 1);
-          }
-        }
-      }
+    // A particle: one letter, drawn from this language's own inventory rather
+    // than rounded up to a whole root. Only _buildFunctionWords asks for this,
+    // and only for grammar words — the equivalent of English `a` or `I`. A
+    // one-letter CONTENT word would be a truncation artifact, which is why
+    // run() keeps its floor of one full root for everything else.
+    if (n === 1) {
+      const useVowel = rng.below(3) === 0;
+      return useVowel
+        ? t.vowelSet.charAt(this._wpick(t.vowelW))
+        : t.consSet.charAt(this._wpick(t.consW));
     }
 
-    // --- contraction sprinkling ----------------------------------------
+    let word;
+    if (t.compounds && n >= 6 && rng.below(3) === 0) {
+      // A compound is ONE token — count-exact callers stay exact.
+      word = run(Math.ceil(n / 2)) + "-" + run(Math.floor(n / 2));
+    } else {
+      word = run(n);
+    }
+
+    // --- digraph / trigraph injection ------------------------------------
+    // The substrate tables are built from this language's own inventory, so a
+    // splice can never introduce a letter the language does not use.
     if (useContractions && rng.below(4) === 0) {
       word += this._randomContraction();
     }
 
-    // --- collapse an accidental leading double letter ------------------
-    if (word.length > 3 && word.charAt(0) === word.charAt(1)) {
-      word = Ortho._insertAt(word, word.charAt(2), 1);
-    }
-
     return clusterGuard(word);
+  }
+
+  // Weighted index pick against a cumulative table from mkw().
+  _wpick(cum) {
+    const x = this.rng.next();
+    for (let i = 0; i < cum.length; i++) if (x < cum[i]) return i;
+    return cum.length - 1;
   }
 
   // ---- punctuation pass (readable path only) ----------------------------
@@ -452,8 +569,11 @@ class Ortho {
       const span = 2 + this.rng.below(3);            // 2..4 words spoken
       const start = 1 + this.rng.below(Math.max(1, n - span - 1));
       const end = Math.min(n - 1, start + span - 1);
-      words[start] = '"' + words[start];
-      words[end] = words[end] + '"';
+      if (this.tables.capitalizeQuoted && words[start]) {
+        words[start] = words[start].charAt(0).toUpperCase() + words[start].slice(1);
+      }
+      words[start] = this.tables.quotePair[0] + words[start];
+      words[end] = words[end] + this.tables.quotePair[1];
       claimed[start] = claimed[end] = true;
       if (this.section && this.section.names.length && start - 1 >= 0) {
         words[start - 1] =
@@ -467,7 +587,7 @@ class Ortho {
       // choose an unclaimed interior word if possible
       let i = 1 + this.rng.below(n - 1);
       if (!claimed[i]) {
-        words[i] = '"' + words[i] + '"';
+        words[i] = this.tables.quotePair[0] + words[i] + this.tables.quotePair[1];
         claimed[i] = true;
       }
     }
@@ -497,7 +617,7 @@ class Ortho {
           hit = this.rng.next() < this.commas * 0.35;
         }
         if (hit) {
-          words[i] = words[i] + ",";
+          words[i] = words[i] + this.tables.clauseMark;
           sinceLast = 0;
         }
       }
@@ -549,7 +669,7 @@ class Ortho {
     this._punctuate(words);
     // capitalize first word, punctuate last
     words[0] = words[0].charAt(0).toUpperCase() + words[0].slice(1);
-    const p = PUNCTUATION.charAt(this.rng.below(PUNCTUATION.length));
+    const p = this.tables.terminals.charAt(this.rng.below(this.tables.terminals.length));
     words[words.length - 1] += p;
     return words;
   }

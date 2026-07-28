@@ -15,7 +15,7 @@
 import { readFileSync } from "node:fs";
 import { Ortho, SRC } from "../src/index.js";
 
-const VERSION = "v3";
+const VERSION = "v4";
 
 // [seed, n, maxLetters, preset, filename]
 const CASES = [
@@ -78,6 +78,6 @@ for (const [label, ok] of inv) {
 }
 
 console.log(failures === 0
-  ? `\nCONFORMANT — spec 2.0, vectors ${VERSION}`
+  ? `\nCONFORMANT — spec 3.0, vectors ${VERSION}`
   : `\n${failures} FAILURE(S)`);
 process.exit(failures === 0 ? 0 : 1);
