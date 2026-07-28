@@ -10,7 +10,7 @@ Coherence across hosts is *proven*, not hoped for: every host that generates
 output diffs it against the published golden vectors (§8). Same seed → same
 language → byte-identical tokens, on every platform.
 
-**Spec version:** 1.1 · **Vector set:** v2 · **PRNG:** Mulberry32
+**Spec version:** 2.0 · **Vector set:** v3 · **PRNG:** Mulberry32
 
 ---
 
@@ -120,13 +120,37 @@ Produces one word. Draw order (normative):
    - 3: interleave consonant-first, reverse
 
    All four modes are REQUIRED — the irregularity is the point.
-5. **Digraph/trigraph injection.** Draw `below(2)`; if 0: when `length>9`, splice
-   a trigraph (draw its index) at an end determined by mode; when `5<length<8`,
+5. **Digraph/trigraph injection.** Draw `below(2)`; if 0: when `length>7`, splice
+   a trigraph (draw its index) at an end determined by mode; when `2<length<8`,
    splice a digraph (draw its index) similarly.
+
+   These bands are the only path by which a seed's own consonant tables reach a
+   word — the pools in step 3 draw from the fixed canon, not from the substrate.
+   Narrow bands therefore mean words that carry no language-specific material.
+   Spec 1.x used `>9` and `5<length<8`, which excluded every word under six
+   letters; since the readable path produces mostly short words, whole
+   paragraphs could contain nothing seed-specific and different seeds read
+   alike. The 2.0 bands admit short words to the digraph path.
 6. **Contraction.** If `contractions` and `below(4)==0`, append a contraction
    (draw its index via §5.5).
 7. **Leading double-letter fix.** If `length>3` and `word[0]==word[1]`, insert
    `word[2]` at position 1.
+8. **Cluster guard.** Scan the assembled word left to right, dropping a
+   character when either holds:
+   - it would be the third consecutive occurrence of the same letter
+   - it is a consonant identical to the preceding one, and at least two
+     consonants already precede it without an intervening vowel
+
+   Consumes no PRNG draws — it is a filter over the finished string, not a
+   decision. Apostrophes are transparent: neither vowel nor consonant, and they
+   do not reset the consonant run.
+
+   The first rule removes triples (`vzzzo` → `vzzo`) that no step intends. The
+   second removes a doubled consonant *inside* a cluster (`ssvvot` → `ssvot`),
+   which reads as buzz rather than as language. Doubled consonants elsewhere
+   are left alone, and runs of three distinct consonants are left alone — a
+   trigraph is three consonants, and forbidding them would delete the feature
+   step 5 exists to deliver. New in 2.0; fires on roughly 2% of words.
 
 ### 5.2 String helpers
 
@@ -250,6 +274,18 @@ not fight for the same word edge).
 - `sentence(numWords, maxLetters)` → array of word-strings; first word
   capitalized, terminal mark on the last. Recurrence + punctuation applied.
 - `paragraph(numSentences, maxWords, maxLetters)` → flat array across sentences.
+  For each of `numSentences` sentences, call
+  `sentence(below(maxWords), maxLetters)`. **`maxWords` is drawn below;
+  `maxLetters` is passed through unchanged.** Sentence length varies, word
+  length does not vary twice.
+
+  Spec 1.x left this unspecified, and every host inherited the reference's
+  behaviour of drawing below *both*. Since `sentence` already draws each word's
+  length below its own argument, that made word length a doubly-reduced value:
+  at `maxLetters` 8 a paragraph averaged two or three letters, below the
+  digraph band in step 5, so paragraphs carried no seed-specific material at
+  all. Passing `maxLetters` through raises the mean to about 4.8 and keeps
+  sentence-length variation, which reads as prose rather than as a list.
 - `page(numParagraphs, …)` → array of paragraphs (each a word array); a section
   boundary.
 - `tokens(n, maxLetters=8)` → EXACTLY `n` word-atoms, in order. Recurrence
@@ -280,7 +316,8 @@ not fight for the same word edge).
 
 ## 11. Golden vectors
 
-`test/vectors/vN/seed_<seed>.txt`, one atom per line as `<index>\t<word>`,
+`test/vectors/vN/seed_<seed>.txt`, one atom per line as
+`<index>\t<word>\t<source>`,
 produced by `tokens(seed, n)` with all dials 0. These are the portable contract.
 Each conforming host has a test that regenerates and diffs against them; a clean
 diff is the definition of "coherent with the reference." Vectors are versioned:
