@@ -426,6 +426,18 @@ diff is the definition of "coherent with the reference." Vectors are versioned:
 a deliberate algorithm change is a new vector set and a spec-version bump, never
 a silent edit.
 
+**Two sets, because one is not enough.** `test/vectors/vN/` covers `tokens` —
+count-exact, structure-free, no punctuation or capitalisation to keep in sync.
+That is the right primary contract, but it is blind to everything §8 does, and
+that blindness twice let a real bug reach three hosts while every vector passed:
+a doubly-reduced word length in spec 1.x, and English punctuation on every
+language in the first cut of 3.0.
+
+`test/vectors/vN-readable/` therefore covers `paragraph` — clause marks, quote
+pairs, quoted capitalisation, terminal marks, compounds. Produced by
+`test/oracle_readable.js`, one word per line as `<index>\t<word>`, with
+`paragraph(3, 12, 8)` at preset 0.5. A host must pass both.
+
 ---
 
 ## 12. Repo constellation
