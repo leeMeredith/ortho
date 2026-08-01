@@ -202,3 +202,83 @@ Nativised-vs-raw is two layers under another name, so this partly reopens
 the one-layer decision settled above. Too large to carry alongside erosion
 and the base borrowed stratum. Revisit once both have landed and been
 heard.
+
+---
+
+# Template distance metric — settled
+
+Closes the open item "the distance metric itself." Operates on the ten
+templates of §4.2 step 1. No PRNG, no engine dependency.
+
+## Features per template
+
+Scanning adjacent slot pairs:
+
+- onsetC  — consonant cluster at position 0
+- codaC   — consonant cluster ending the template
+- medialC — consonant cluster elsewhere
+- vv      — adjacent vowel slots
+- len     — template length
+- vinit   — 1 if vowel-initial
+- cfin    — 1 if consonant-final
+
+Distance is the weighted sum of absolute differences:
+onsetC x3, codaC x3, medialC x2, vv x2, len x1, vinit x1, cfin x1.
+
+## Why position matters
+
+The first metric counted only HOW MANY clusters a template has, not where.
+That scored CCVC <-> CVCC and CCVCV <-> CVCCV at 0 — treating onset and
+coda clusters as identical. They are among the most audible distinctions
+available: `bta` and `tab` are not the same shape, and English tolerates
+coda clusters far more readily than exotic onsets. Distance 0 there was
+wrong, not merely imprecise.
+
+Adding position fixed the range as well. Old metric: values 0-6, six pairs
+tied at the maximum. New: values 2-8, no ties at zero, useful spread.
+
+## Result
+
+Most distant: CVCC <-> CCVCV at 8 (coda-cluster against onset-cluster).
+Then seven pairs at 7, including CVV <-> CCVC — which was the instinct this
+was built to check, and it lands near the maximum.
+
+Full table, each template's donors sorted nearest first:
+
+  CVCV   CVC:2 CVCVC:2 VCVC:2 CVCCV:3 CVV:3 CVVC:3 CCVC:4 CVCC:4 CCVCV:4
+  CVC    CVCV:2 CVCVC:2 VCVC:2 CVV:3 CVVC:3 CCVC:4 CVCC:4 CVCCV:5 CCVCV:6
+  CCVC   CCVCV:2 CVCV:4 CVC:4 CVCVC:4 VCVC:4 CVVC:5 CVCC:6 CVCCV:7 CVV:7
+  CVCC   CVCV:4 CVC:4 CVCVC:4 VCVC:4 CVVC:5 CCVC:6 CVCCV:7 CVV:7 CCVCV:8
+  CVCVC  CVCV:2 CVC:2 VCVC:2 CVCCV:3 CVVC:3 CCVC:4 CVCC:4 CCVCV:4 CVV:5
+  CCVCV  CCVC:2 CVCV:4 CVCVC:4 CVCCV:5 CVC:6 VCVC:6 CVV:7 CVVC:7 CVCC:8
+  VCVC   CVCV:2 CVC:2 CVCVC:2 CVVC:3 CCVC:4 CVCC:4 CVCCV:5 CVV:5 CCVCV:6
+  CVCCV  CVCV:3 CVCVC:3 CVC:5 CCVCV:5 VCVC:5 CVV:6 CVVC:6 CCVC:7 CVCC:7
+  CVV    CVVC:2 CVCV:3 CVC:3 CVCVC:5 VCVC:5 CVCCV:6 CCVC:7 CVCC:7 CCVCV:7
+  CVVC   CVV:2 CVCV:3 CVC:3 CVCVC:3 VCVC:3 CCVC:5 CVCC:5 CVCCV:6 CCVCV:7
+
+## Minimum donor distance: 3
+
+Distance 2 donors are too similar for loans to register. The floor is
+expressed as a THRESHOLD, not a rank ("skip the nearest").
+
+Rank fails: CVCV, CVC, CVCVC and VCVC each have three donors tied at 2, so
+"second nearest" is undefined. Any tiebreak would be arbitrary and would
+have to be specified identically in C. A threshold is one number and one
+sentence.
+
+Effect of a floor of 3:
+- CCVC and CCVCV are each other's only distance-2 donor; next is 4. Pushed
+  straight to 4.
+- CVV's only 2 is CVVC; next is 3. Clean.
+- CVCC has no donor at 2 at all — nearest is 4. Already isolated;
+  unaffected.
+
+Interacts with reach: a low-reach language borrowing near now lands at 3,
+which is where loans start being discernible.
+
+## Still open
+
+The mapping from reach to distance. Does reach select a target distance and
+take the nearest match, or select a band and draw within it? Taste
+question; the table cannot answer it. This is the last item before a
+prototype is possible.
