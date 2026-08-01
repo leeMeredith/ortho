@@ -89,3 +89,69 @@ that a seed names a fixed language forever.
   REDUCTION, same family as erosion, where borrowing is addition. A small
   inventory + short template + heavy erosion may already produce it by
   accident. Worth listening for before designing anything.
+
+---
+
+# Reach — donor distance derived from the substrate
+
+Supersedes the open question "how distant is the donor." Distance is not a
+free parameter; it follows from the language's own range.
+
+## The measure
+
+**Reach** is derived from what §4.2 already established — inventory sizes
+(6–20 consonants, 4–6 vowels), template cut-count, cluster admissibility.
+No new draw, no draw-order change. It falls out of the language rather than
+being imposed on it.
+
+A CVV language with 6 consonants and 4 vowels has low reach: few shapes, no
+clusters, two cut points. A CCVCV language with 20 consonants has high
+reach.
+
+## The rule
+
+**High reach borrows far. Low reach borrows near.**
+
+Distance scales DIRECTLY with reach, not inversely. A small language
+selects a donor close to what it already inhabits; a large one reaches for
+severity.
+
+## Why this way round
+
+The inverse — poor languages reaching furthest to fill gaps — is the
+intuitive version and it is wrong twice over.
+
+Empirically: small languages under pressure are conservative, not
+adventurous. Icelandic coins from native roots rather than importing
+(tölva for computer, built from native material instead of taking the
+Latin). Precarity produces purism. English borrows omnivorously — tsunami,
+shampoo, chocolate — because a dominant, secure language has nothing to
+lose by it. Prestige licenses distant borrowing.
+
+Mechanically: under the inverse rule the poorest languages get the loudest
+loans. A CVV language with 6 consonants would carry heavy clusters from a
+distant donor — the most conspicuous possible signal in the language least
+able to absorb it. That reads as breakage, not contact.
+
+## What it composes into
+
+Two recognisably different kinds of language from one rule:
+
+- Low reach + worn function words + near donor → tight, internally
+  consistent, plausibly the pidgin-adjacent object noted above.
+- High reach + distant donor → sprawling, layered, audibly multi-stratum.
+
+## Consequence to accept
+
+Borrowing behaviour is fully determined by phonology. A rich language that
+happens to borrow lightly is not expressible. Real English is arguably that
+case. The rule is explanatory rather than merely generative — worth it, but
+it is a real constraint.
+
+## Still open here
+
+- The distance metric itself. Cluster admissibility is the most audible
+  axis, but "far" needs a definition over the ten templates before anything
+  can be prototyped.
+- Whether reach also scales the RATE of borrowing, or only the distance.
+  Currently only distance; rate is a separate substrate draw.
