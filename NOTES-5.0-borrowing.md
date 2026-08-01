@@ -282,3 +282,97 @@ The mapping from reach to distance. Does reach select a target distance and
 take the nearest match, or select a band and draw within it? Taste
 question; the table cannot answer it. This is the last item before a
 prototype is possible.
+
+---
+
+# Two distance axes — measured, and reach needs rethinking
+
+## The problem this solves
+
+Template distance alone has a ceiling that varies by template. The four
+cluster-free templates top out at 4, 6, 5, 6 (CVCV, CVC, CVCVC, VCVC);
+cluster templates reach 7 and 8. So distant borrowing appeared to be
+available only to languages that already have clusters — which cuts against
+reach, since reach is about inventory size and cut-count, not cluster
+presence.
+
+Resolution: the donor is a template PLUS a partially-disjoint inventory.
+Distance is two-dimensional. A CVCV language whose donor is also CVCV but
+built from consonants it barely uses produces loans that are structurally
+native and phonemically foreign — the shape does not protrude, the letters
+do. Real pattern: Japanese loans from English keep Japanese syllable
+structure but introduced phonemes that did not exist natively.
+
+## Measured over 300 seeds
+
+Canon is 20 consonants, 6 vowels.
+
+  nCons  langs  unused consonants  unused vowels
+      6     21                 14              1
+      7     11                 13              1
+      8     24                 12              0
+      9     11                 11              2
+     10     25                 10              2
+     11     27                  9              2
+     12     24                  8              1
+     13     17                  7              1
+     14     16                  6              2
+     15     20                  5              2
+     16     23                  4              0
+     17     18                  3              2
+     18     16                  2              2
+     19     22                  1              0
+     20     25                  0              2
+
+124/300 languages have fewer than 6 unused consonants. 25 sit at exactly
+20 — no disjoint donor possible at all.
+
+## The axes are complementary, not competing
+
+Phoneme distance is anti-correlated with inventory size: 6 consonants
+leaves 14 spare, 20 leaves none. Small inventory is also low reach by the
+current definition. So languages that cannot reach far by SHAPE are exactly
+the ones that can reach far by PHONEME, and vice versa. Each language has
+one axis genuinely open to it.
+
+Better than the design needed — but it breaks reach as written.
+
+## Reach must be rethought
+
+Reach was "inventory size plus template cut-count scales donor distance."
+If small-inventory languages have the most phonemic room, reach cannot
+simply be LOW for them. It has to describe which currency a language
+spends, not how much it has.
+
+Not resolved here. This is the open question to return to.
+
+## Vowel disjointness is unavailable
+
+Canon of 6, nVow = 4 + below(3), so unused vowels range 0-2 and several
+inventory sizes show 0. There is no reliable vowel disjointness. Phoneme
+distance is a CONSONANT-ONLY device. State this in the spec rather than
+letting a port discover it.
+
+## Caveat on the measurement
+
+The unused column is derived from nCons alone: it shows HOW MANY letters
+are free, not WHICH. Two languages with 10 consonants may have quite
+different spare sets. Fine for a donor drawn purely from unused letters. If
+the rule ever becomes "donor shares some and differs in others," the
+overlap between specific sets matters and this table does not describe it.
+
+## Also unresolved from the banding work
+
+Rank-thirds banding produced bands split mid-tie — CVCC has near at 4,4,4
+and mid opening at another 4, so which third a donor lands in is decided by
+sort order rather than distance. Arbitrary, and would have to be specified
+identically in C. Two candidate fixes, neither adopted:
+
+- Absolute bands (near 3-4, mid 5-6, far 7+) with clamping to the nearest
+  non-empty band. Makes CVCV languages incapable of distant borrowing by
+  template — possibly correct, since the metric says no distant relative
+  exists.
+- Two bands rather than three, split at 5. Fewer boundaries, fewer places
+  for a tiebreak to matter. Less expressive, much easier to port.
+
+Both may be moot now that phoneme distance is in play.
