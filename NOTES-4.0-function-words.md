@@ -113,3 +113,67 @@ function words — the English/French texture, where grammar took no
 loans. Runs opposite to erosion (importing foreign shapes vs wearing
 native ones down) and would fight it if applied to the same twenty
 words. Separate design.
+
+---
+
+# Spec integration (added after reading SPEC.md)
+
+## Bounds recording needs no normative language
+
+§5.1 step 4 already specifies the walk completely — slot string, direction,
+run-counting, advance amounts, every draw. Any conformant run() therefore
+already knows where each slot boundary falls in the emitted string. Cut
+positions can be stated in terms of the existing walk; no new spec text
+about recording offsets, and no license for a port to compute them
+differently.
+
+## §5.1 step 2's rationale must be amended, not just extended
+
+Step 2 currently justifies the one-root floor by saying a one-letter
+CONTENT word is a truncation artifact. Erosion introduces sub-root words
+that are NOT artifacts — they are worn function words. Without a sentence
+distinguishing the two cases, 4.0 reads as contradicting the rationale it
+sits next to. The distinction is real; it has to be written.
+
+## The edits
+
+1. §5.1 step 2 — distinguish worn function words from content truncation.
+2. §5.1 step 4 — note the walk's slot boundaries are the cut points,
+   consuming no draws.
+3. §5.4 — replace the size-counter description (currently four lines, two
+   of them describing the broken ladder); point at §5.7.
+4. §5.7 — NEW. Cut legality, the [0,0,0,1,1,2] pattern, clamping, the CVV
+   gate, one-retry dedupe. Put the mechanics here rather than growing §5.4:
+   §5.1 is already the long section, and this is word() behaviour.
+5. §10 — the ladder invariant, below.
+6. Version line; v5 vector paths in §11.
+
+## A missing invariant, and why the 3.0 defect survived release
+
+§10 asserts nothing about the function-word ladder. Invariant 6 covers
+recurring terms only (names, topics, phrase words), so the collapse
+falsified nothing. Vectors catch CHANGES, not wrongness — they would have
+reproduced sixteen identical lengths faithfully on every host forever.
+Both vector sets passed throughout. That is how it reached release.
+
+Proposed: a language's function-word table contains at least two distinct
+lengths above 1.
+
+- True under 4.0 for every template; even two-cut templates give two.
+- Would have failed loudly under 3.0.
+- Guards the port: a kernel that gets cut selection wrong and collapses
+  back to full roots fails even if someone regenerates vectors from the
+  broken implementation.
+
+Note the class difference. Invariants 1–5 are consistency properties (same
+seed, same output, same count). Invariant 6 is the only content property.
+This would be the second — and the defect it catches is exactly the kind
+that consistency testing cannot see.
+
+## Still open
+
+- Prefix pairs: ih / ihy, distinct entries where one is a prefix of the
+  other. Probably fine — real languages have a / an, the / this — but never
+  explicitly tested or heard for.
+- §5.7 drafting waits on the borrowed-stratum design, since both land in
+  the same spec bump and otherwise it gets written twice.
