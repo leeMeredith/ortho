@@ -155,3 +155,50 @@ it is a real constraint.
   can be prototyped.
 - Whether reach also scales the RATE of borrowing, or only the distance.
   Currently only distance; rate is a separate substrate draw.
+
+---
+
+# Contact under force — deferred, not part of this design
+
+A distinct language TYPE, not a parameter on reach. Recorded here so the
+reasoning survives; not to be built with the rest.
+
+## The case
+
+Reach describes CHOSEN borrowing: a language selects a donor at a distance
+its own range licenses. Contact under force is not selection — the donor is
+imposed, and the language's only move is assimilation.
+
+Hawaiian is the type case. Extreme low reach: 8 consonants, 5 vowels,
+strictly CV, no clusters, no final consonants. Under sudden contact it did
+not borrow near, because no near donor existed. It borrowed from English
+and hammered the loans into native shape — Kalikimaka from Christmas, kaʻa
+from car, pipi from beef. Every cluster broken up, every final consonant
+given a vowel.
+
+This is not a counterexample to reach. It is a different mechanism, and it
+needs its own rule.
+
+## The correction worth keeping
+
+Nativised loans do NOT stick out — that is what nativisation means. A
+Hawaiian speaker does not hear kaʻa as foreign. So if the goal is loans
+that protrude in a low-reach language, assimilation is the wrong mechanism.
+
+What does protrude is PARTIAL nativisation, unevenly applied: most loans
+hammered flat, a minority resisting — typically the recent, high-frequency,
+or prestige-marked ones. That leaves a small subset carrying donor shapes
+the language otherwise forbids, against a background of loans gone native.
+Genuinely conspicuous.
+
+## Shape it would take
+
+Sudden imposition; high rate; distant donor REGARDLESS of reach; most loans
+nativised; a minority left raw. A seed would draw whether it is this type.
+
+## Why deferred
+
+Nativised-vs-raw is two layers under another name, so this partly reopens
+the one-layer decision settled above. Too large to carry alongside erosion
+and the base borrowed stratum. Revisit once both have landed and been
+heard.
