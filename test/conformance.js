@@ -73,6 +73,13 @@ const inv = [
     new Ortho(4, { preset: 0.6 }).tokensWithSource(50).map((t) => t.text).join("|")],
   ["every token fits ORTHO_MAX_TOKEN (48)",
     new Ortho(8, { preset: 0.8 }).tokens(2000).every((w) => w.length < 48)],
+  ["function-word ladder (>= 2 distinct lengths above 1, all templates)",
+    Array.from({ length: 300 }, (_, i) => i + 1).every((sd) => {
+      const fw = new Ortho(sd).tables.functionWords;
+      const lens = new Set(fw.map((w) => w.replace(/[^a-z']/gi, "").length)
+                             .filter((L) => L > 1));
+      return lens.size >= 2;
+    })],
 ];
 for (const [label, ok] of inv) {
   console.log(`${ok ? "PASS" : "FAIL"}  invariant: ${label}`);
