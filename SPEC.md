@@ -7,10 +7,10 @@ implementation (JavaScript, this repo) conforms to this spec; the Max external
 disagree, the spec wins and the implementation is a bug.
 
 Coherence across hosts is *proven*, not hoped for: every host that generates
-output diffs it against the published golden vectors (§8). Same seed → same
+output diffs it against the published golden vectors (§11). Same seed → same
 language → byte-identical tokens, on every platform.
 
-**Spec version:** 3.0 · **Vector set:** v4 · **PRNG:** Mulberry32
+**Spec version:** 4.0 · **Vector set:** v5 · **PRNG:** Mulberry32
 
 ---
 
@@ -193,6 +193,12 @@ Produces one word. Draw order (normative):
    CONTENT word is a truncation artifact, which is why step 4 floors everything
    else at one whole root.
 
+   The floor is on CONTENT words. §5.7 produces function words BELOW root
+   length, which are not artifacts but worn forms: a word shortened by constant
+   use, as English *the* was longer once. Erosion cuts only at syllable
+   boundaries the language itself permits, so a worn function word remains a
+   legal shape in its language; a truncated content word would not be.
+
 3. **Compound decision.** If `compounds` and `n>=6`, draw `below(3)`; on 0 the
    word is `run(ceil(n/2)) + "-" + run(floor(n/2))`. Otherwise `run(n)`.
 
@@ -214,6 +220,11 @@ Produces one word. Draw order (normative):
    The single redraw is not a loop: a 6-consonant language would otherwise
    spin. It exists because a doubled letter at a slot boundary reads as a
    stutter rather than as a geminate.
+
+   The output length at each slot boundary is determined by this walk. §5.7
+   truncates at those positions; recording them consumes no draws and changes
+   no output. A cluster spans two or three slots as one unit, so the slots it
+   covers have no boundary between them.
 
 5. **Contraction.** If `contractions` and `below(4)==0`, append a contraction
    (draw its index via §5.5).
@@ -250,16 +261,105 @@ capitalized; they carry the section's identities.
 
 ### 5.4 Function words (20, built at substrate time)
 
-A growing size counter starting at **1**, incremented every `floor(20/4)=5`
-words. Each: `word(size, contractions=false)`. These are the grammar-glue.
+Built in two groups, in this order. These are the grammar-glue.
 
-Starting at 1 rather than 2 is what gives a language its particles. See §5.1
-step 2.
+1. **Four particles.** `word(1, contractions=false)` — the §5.1 step 2 path,
+   one letter from the language's own inventory. NOT derived from erosion:
+   only `VCVC` can erode to a single letter (a bare `V`), so erosion-derived
+   particles would exist in one language in eight and be impossible elsewhere.
+
+2. **Sixteen eroded roots.** `word(L, contractions=false)` where `L` is the
+   root template's length, truncated per §5.7 with cut index `i` running 0..15.
+
+Function words are worn NATIVE material by construction. Nothing else in the
+language may claim them.
 
 ### 5.5 Contraction draw
 
 Always `contractions[below(len)]` — indexed safely against the table's own
 length. (Historical bug indexed by consonant count; do not reproduce.)
+
+### 5.6 Cluster guard
+
+Runs on every word returned by §5.1. **Consumes no draws.** Deletes characters
+only — never inserts, never reorders.
+
+A left-to-right filter over the input, building an output string. Vowels are
+`aeiouy`; a consonant is any character that is neither a vowel nor an
+apostrophe. Maintain a counter `cons`, starting at 0. For each input character:
+
+1. If the output already ends with two copies of this character, **skip it**.
+   No three identical characters in a row. The test is against the OUTPUT, so
+   a character already dropped does not count toward a run.
+2. Otherwise, if the character is a consonant: if `cons >= 2` and the output
+   already ends with this same character, **skip it**. Otherwise increment
+   `cons`.
+3. Otherwise, if the character is not an apostrophe (i.e. it is a vowel), reset
+   `cons` to 0. An apostrophe leaves `cons` unchanged.
+4. Append the character.
+
+`cons` counts CONSONANTS ALREADY EMITTED, so in step 2 it has not yet been
+incremented for the character under test. It is never decremented and is reset
+only by a vowel. A skipped character does not increment it.
+
+Because the filter is left-to-right and its state depends only on characters
+already consumed, `guard(W[0..k])` is always a prefix of `guard(W)`. Truncating
+before the guard and truncating after it never disagree about content. §5.7
+relies on this.
+
+### 5.7 Function-word erosion
+
+Function words are short because constant use wears them down. A function word
+is a WORN root: build the full root, then truncate at a syllable boundary. The
+available lengths therefore fall out of the language's own template rather than
+being imposed on it.
+
+**Cut positions.** While walking the slot string (§5.1 step 4), record the
+output length at each slot boundary before emitting that slot. A digraph fills
+two slots with one unit, so the intermediate slot has NO recorded boundary.
+This costs no draws — a conformant §5.1 step 4 already determines these
+positions.
+
+**Legal cuts.** For a root template `R` of length `L`, a cut at slot `k`
+(2 <= k <= L) is legal when BOTH hold:
+
+- **Template.** `k == L`, or `R[k-1]` is `V`, or `R[k-1]` is `C` and `R[k-2]`
+  is `V`. Never mid-onset-cluster.
+- **Boundary.** Slot `k` has a recorded output length.
+
+Cuts below length 2 are excluded: short grammar, never short vocabulary.
+Cut lists are therefore per-LANGUAGE, not per-template — a template's list
+depends on whether that language has digraph tables.
+
+**Which cut.** For eroded word `i` (0-based), the pattern
+`[0, 0, 0, 1, 1, 2][i mod 6]` indexes the legal-cut list, skewing short: the
+most-used words erode most. The index **clamps** to the last available cut,
+never wraps. Wrapping would fold index 2 back onto the shortest cut for
+two-cut templates, silently reshaping the skew.
+
+The pattern tops out at index 2, so a four-cut language never produces its full
+root as a function word. Deliberate: it reserves the top of each language's
+range for content vocabulary.
+
+If a language has no legal cut, return the full root unmodified.
+
+**CVV gate.** When the root template is exactly `CVV`, suppress cluster tables
+(§5.1 step 4) while building function words. `CVV` has two adjacent `V` slots,
+so the vowel digraph fills both and the slot-2 boundary vanishes, leaving one
+legal cut and no ladder at all. This is a cut-ENABLING rule, not an erosion
+rule, and applies to no other template.
+
+**Deduplication.** After building an eroded word, if it already appears in the
+function-word table, redraw it ONCE with the same cut index. If the redraw also
+collides, keep it. A fixed cap, never a loop: a small inventory would spin.
+
+Retries consume draws, so a host must test for collision at exactly these
+points or the streams diverge from that point on. Seed 7 exercises a surviving
+double collision.
+
+Truncation happens BEFORE §5.6, on the raw run output at a recorded boundary —
+not by character index on a finished word, which the guard's deletions would
+shift.
 
 ---
 
@@ -413,6 +513,15 @@ than compensated for — see HOSTS.md §7.
    Max, and oF. Proven by vector diff.
 6. **≥ 2-letter recurrence.** Every recurring term (name, topic, phrase word) is
    at least two letters.
+7. **Function-word ladder.** Every language's function-word table contains at
+   least two distinct lengths above 1.
+
+   Invariants 1–5 are consistency properties: same seed, same output, same
+   count. Vectors enforce those. But vectors record CHANGE, not correctness —
+   spec 3.0 collapsed sixteen of twenty function words to identical length and
+   every vector passed on every host, because each host reproduced the collapse
+   faithfully. Only a content property catches that class of defect. This is
+   the second, after 6.
 
 ---
 
