@@ -409,13 +409,24 @@ class Ortho {
     // keeps its own floor of one full root, because a single-letter CONTENT
     // word is a truncation artifact rather than a word class. The distinction
     // is deliberate: short grammar, never short vocabulary.
-    let size = 1;
-    let count = 0;
-    const step = Math.floor(n / 4);
-    for (let i = 0; i < n; i++) {
-      count++;
-      if (count === step) { size++; count = 0; }
-      t.push(this.word(size, { contractions: false }));
+    const particles = 4;
+    for (let i = 0; i < particles; i++) {
+      t.push(this.word(1, { contractions: false }));
+    }
+    const RL = this.tables.root.length;
+    // Erosion draws from a small space at the short end, so collisions are
+    // common. Redraw ONCE against the whole table; if the redraw collides too,
+    // keep it. A fixed cap, never a loop: a small inventory would spin. C must
+    // redraw at exactly these points or the streams diverge.
+    for (let i = 0; i < n - particles; i++) {
+      const opts = {
+        contractions: false,
+        noClusters: this.tables.root === "CVV",
+        cut: i
+      };
+      let w = this.word(RL, opts);
+      if (t.indexOf(w) !== -1) w = this.word(RL, opts);
+      t.push(w);
     }
   }
 
@@ -443,6 +454,7 @@ class Ortho {
   // mix modes are kept deliberately to preserve the "almost-language" feel.
   word(numLetters, opts = {}) {
     const useContractions = opts.contractions !== false;
+    const noClusters = opts.noClusters === true;
     const rng = this.rng;
     const t = this.tables;
 
@@ -458,15 +470,17 @@ class Ortho {
       const R = t.root;
       const reps = Math.max(1, Math.round(len / R.length));
       const slots = R.repeat(reps);
+      const bounds = new Array(slots.length + 1).fill(-1);
       let out = "";
       let i = 0;
       while (i < slots.length) {
+        bounds[i] = out.length;
         if (slots[i] === "V") {
           // Two adjacent vowel slots take a cluster from this language's own
           // table, mirroring how consonant runs take digraphs and trigraphs.
           let vk = 0;
           while (i + vk < slots.length && slots[i + vk] === "V") vk++;
-          if (vk >= 2 && t.vowelDigraphs.length) {
+          if (vk >= 2 && t.vowelDigraphs.length && !noClusters) {
             out += t.vowelDigraphs[rng.below(t.vowelDigraphs.length)];
             i += 2;
             continue;
@@ -490,10 +504,10 @@ class Ortho {
         // it correctly never uses a digraph.
         let k = 0;
         while (i + k < slots.length && slots[i + k] === "C") k++;
-        if (k >= 3 && t.consonantTrigraphs.length) {
+        if (k >= 3 && t.consonantTrigraphs.length && !noClusters) {
           out += t.consonantTrigraphs[rng.below(t.consonantTrigraphs.length)];
           i += 3;
-        } else if (k >= 2 && t.consonantDigraphs.length) {
+        } else if (k >= 2 && t.consonantDigraphs.length && !noClusters) {
           out += t.consonantDigraphs[rng.below(t.consonantDigraphs.length)];
           i += 2;
         } else {
@@ -503,6 +517,9 @@ class Ortho {
           i++;
         }
       }
+      bounds[slots.length] = out.length;
+      this._lastBounds = bounds;
+      this._lastSlots = slots;
       return out;
     };
 
@@ -511,6 +528,28 @@ class Ortho {
     // and only for grammar words — the equivalent of English `a` or `I`. A
     // one-letter CONTENT word would be a truncation artifact, which is why
     // run() keeps its floor of one full root for everything else.
+    if (opts.cut !== undefined) {
+      const R = t.root;
+      const w0 = run(R.length);
+      const b = this._lastBounds;
+      const legal = [];
+      for (let k = 2; k <= R.length; k++) {
+        if (k < R.length) {
+          const last = R[k - 1], prev = R[k - 2];
+          if (!(last === "V" || (last === "C" && prev === "V"))) continue;
+        }
+        if (b[k] >= 0) legal.push(b[k]);
+      }
+      if (!legal.length) return clusterGuard(w0);
+      // Skew short: the most-used words wear down most. The pattern indexes
+      // the cut list; where a language has fewer cuts than the pattern reaches,
+      // the index CLAMPS to the longest available rather than wrapping back to
+      // the shortest, so the short-heavy intent survives a two-cut template.
+      const pat = [0, 0, 0, 1, 1, 2][opts.cut % 6];
+      const at = legal[Math.min(pat, legal.length - 1)];
+      return clusterGuard(w0.slice(0, at));
+    }
+
     if (n === 1) {
       const useVowel = rng.below(3) === 0;
       return useVowel

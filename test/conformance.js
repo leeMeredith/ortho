@@ -15,7 +15,7 @@
 import { readFileSync } from "node:fs";
 import { Ortho, SRC } from "../src/index.js";
 
-const VERSION = "v4";
+const VERSION = "v5";
 
 // [seed, n, maxLetters, preset, filename]
 const CASES = [
@@ -24,7 +24,9 @@ const CASES = [
   [42, 50, 8, 0, "seed_42_bare.txt"],
   [12345, 50, 8, 0, "seed_12345_bare.txt"],
   [4294967295, 50, 8, 0, "seed_4294967295_bare.txt"],
+  [7, 50, 8, 0, "seed_7_bare.txt"],
   [42, 80, 8, 0.5, "seed_42_preset50.txt"],
+  [7, 80, 8, 0.5, "seed_7_preset50.txt"],
   [12345, 80, 8, 0.5, "seed_12345_preset50.txt"],
 ];
 
@@ -78,6 +80,6 @@ for (const [label, ok] of inv) {
 }
 
 console.log(failures === 0
-  ? `\nCONFORMANT — spec 3.0, vectors ${VERSION}`
+  ? `\nCONFORMANT — spec 4.0, vectors ${VERSION}`
   : `\n${failures} FAILURE(S)`);
 process.exit(failures === 0 ? 0 : 1);
