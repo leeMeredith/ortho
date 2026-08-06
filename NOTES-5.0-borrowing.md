@@ -376,3 +376,102 @@ identically in C. Two candidate fixes, neither adopted:
   for a tiebreak to matter. Less expressive, much easier to port.
 
 Both may be moot now that phoneme distance is in play.
+
+---
+
+# Constraints inherited from shipped 4.0
+
+Written after 4.0 landed across all four repos. These were learned during the
+port, AFTER the design decisions above, and none of them were known when those
+decisions were made. Read this before prototyping.
+
+## The source column is nearly full
+
+`test/oracle.js` documents the encoding:
+
+    0 fresh   1 functionWord   2 topic   3 name   4 phrase
+
+"Loans marked in the existing <source> column" was settled above, but the
+column is a CLASSIFICATION, not a flag set. A borrowed name would need to be
+both 3 and borrowed. Three options, none chosen:
+
+- A sixth value, `5 borrowed`, which loses the name/topic/phrase distinction
+  for loans.
+- A separate bit or byte alongside `source`, which changes the vector line
+  format `<index>\t<word>\t<source>` and therefore every host's oracle.
+- High-bit flagging on the existing byte (C stores it as `uint8_t
+  last_source`), which preserves the format at the cost of readability.
+
+## Invariant 1 constrains the marking
+
+§10 invariant 1: with all dials at 0, output is byte-identical to the vectors
+and all sources are FRESH. `conformance.js` asserts this directly:
+
+    new Ortho(11).tokensWithSource(60).every((t) => t.source === SRC.FRESH)
+
+A loan generated at zero dials is still fresh — it was not recurred. So
+`borrowed` cannot simply replace FRESH, or that invariant breaks. This is the
+strongest argument for a flag alongside `source` rather than a sixth value.
+
+## Draw-order placement
+
+§4.2 has fourteen steps; step 14 (function words) is LAST, and 4.0 confirmed
+`_buildFunctionWords` is the final statement of `_buildSubstrate()`. A donor
+drawn as step 15 leaves steps 1–14 byte-identical. A donor drawn earlier shifts
+everything after it.
+
+But loans reach content vocabulary generated at RUNTIME, not just substrate
+tables, so v6 vectors will diff broadly regardless. The step-15 placement buys
+a clean substrate, not a clean diff.
+
+## Erosion already reserved the space
+
+§5.7's pattern tops out at cut index 2, so a four-cut language never produces
+its full root as a function word. That was deliberate and it was for THIS —
+the top of each language's range is reserved for content vocabulary, which is
+where loans land. Do not undo it.
+
+Also: §5.4 now ends "Function words are worn NATIVE material by construction.
+Nothing else in the language may claim them." That sentence is the loan bar.
+It is already in the shipped spec, so 5.0 does not need to add a prohibition.
+
+## The C signature resists new parameters
+
+`ortho_word(o, num_letters, allow_contractions, out)` is public in `ortho.h`
+and called from six sites. 4.0 needed two new arguments and did NOT add them —
+it added a static `ortho_word_cut(o, cut, no_clusters, out)` instead, plus an
+`o->no_clusters` field on the struct, because the header is the shared contract
+and both hosts vendor it flat.
+
+Borrowing will want the same treatment: a separate entry point and per-instance
+state, not a wider public signature.
+
+Note also that transient internal state goes IN `ortho_t` (there is precedent:
+`last_source`, `no_clusters`, `bounds`), never file-scope static. 4.0 shipped a
+static first and it was moved before release specifically so the kernel stays
+reentrant across instances.
+
+## Vectors cannot prove borrowing works
+
+The lesson 4.0 taught twice. Vectors record CHANGE, not correctness — spec 3.0's
+function-word collapse passed every vector on every host because each host
+reproduced it faithfully. Two bare seeds even passed the 4.0 regeneration
+because 50 tokens at zero dials never reached their function words.
+
+§10 invariant 7 exists for exactly this reason. Borrowing needs its own content
+invariant, decided BEFORE implementation. Candidate: every word marked borrowed
+conforms to the donor template and no word marked native does.
+
+Caveat on invariant 7 worth knowing: 54 of 300 languages passed it under 3.0
+anyway, because `clusterGuard` incidentally shortened some full-root words and
+produced a second length by accident. A content invariant can be weaker than it
+looks. Check what a candidate invariant does against the PREVIOUS spec before
+trusting it.
+
+## Process, if a fresh session picks this up
+
+Every 4.0 decision was measured before it was made — draw counts, legal cut
+positions, duplicate rates, distance tables — and heard across thirty seeds
+before it was written. Two options that sounded right on paper (universal
+cluster suppression; rank-based donor bands) failed only when printed. Print
+first.
